@@ -5,7 +5,18 @@ from pathlib import Path
 import logging
 import traceback
 
-from makepyz import fileos, tasks, exceptions, text
+from makepyz import fileos, tasks, exceptions, text, cli
+
+log = logging.getLogger(__name__)
+
+
+def add_arguments(parser: argparse.ArgumentParser):
+    parser.add_argument("arguments", nargs="*")
+
+
+def process_args(args: argparse.Namespace):
+    if not args.config.exists():
+        raise cli.AbortWrongArgumentError(f"missing config file {args.config}")
 
 
 def makepy():
@@ -14,31 +25,10 @@ def makepy():
     return fileos.loadmod(path)
 
 
-def get_parser():
-    class F(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
-        pass
+@cli.cli(add_arguments, process_args)
+def main(args: argparse.Namespace):
 
-    class MyParser(argparse.ArgumentParser):
-        def parse_args(self, *args, **kwargs):
-            process = kwargs.pop("process") if "process" in kwargs else None
-            options = super().parse_args(*args, **kwargs)
-            level = ((options.verbose or 0) - (options.quiet or 0))
-            level = min(max(level, -1), 1)
-            logging.basicConfig(level={
-                1: logging.DEBUG,
-                0: logging.INFO,
-                -1: logging.WARNING,
-            }[level])
-            return (process(options) or options) if process else options
-
-
-    parser = MyParser(formatter_class=F)
-    parser.add_argument("-v", "--verbose", action="count", help="verbose messaging")
-    parser.add_argument("-q", "--quiet", action="count", help="verbose messaging")
-    return parser
-
-
-def main():
+    log.info("loading make.py file %s", args.config)
     mod = makepy()
 
     def getdoc(fn):
@@ -46,9 +36,9 @@ def main():
             0] if fn.__doc__ else "no help available")
 
     commands = {getattr(mod, k).task: getattr(mod, k) for k in dir(mod) if
-        getattr(getattr(mod, k), "task", None)}
+        isinstance(getattr(getattr(mod, k), "task", None), str)}
 
-    if len(sys.argv) < 2 or sys.argv[1] not in commands:
+    if not args.arguments or args.arguments[0] not in commands:
         txt = "\n".join(f"  {cmd} - {getdoc(fn)}" for cmd, fn in commands.items())
         print(  # noqa: T201
             f"""\
@@ -57,17 +47,14 @@ make.py <command> {{arguments}}
 Commands:
 {txt}
 """, file=sys.stderr)
-        sys.exit()
+        raise cli.AbortExitNoTimingError()
 
-    #workdir = Path(__file__).parent
     try:
-        command = commands[sys.argv[1]]
+        command = commands[args.arguments[0]]
         sig = inspect.signature(command)
         kwargs = {}
-        if "parser" in sig.parameters:
-            kwargs["parser"] = get_parser()
-        if "argv" in sig.parameters:
-            kwargs["argv"] = sys.argv[2:]
+        if "arguments" in sig.parameters:
+            kwargs["arguments"] = args.arguments[1:]
         ba = sig.bind(**kwargs)
         command(*ba.args, **ba.kwargs)
 
