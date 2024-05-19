@@ -1,4 +1,5 @@
 """various file/dir related functions"""
+
 from __future__ import annotations
 
 import contextlib
@@ -62,9 +63,7 @@ def which(exe: Path | str, kind: type[list]) -> list[Path]: ...
 def which(exe: Path | str, kind: None) -> Path | None: ...
 
 
-def which(
-    exe: Path | str, kind: type[list] | None = None
-) -> list[Path] | Path | None:
+def which(exe: Path | str, kind: type[list] | None = None) -> list[Path] | Path | None:
     candidates: list[Path] = []
     for srcdir in os.environ.get("PATH", "").split(os.pathsep):
         for ext in os.environ.get("PATHEXT", "").split(os.pathsep):

@@ -31,8 +31,6 @@ def loadmod(path: Path) -> types.ModuleType:
     return module
 
 
-
-
 #####################
 # Main flags/config #
 #####################

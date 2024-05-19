@@ -20,7 +20,7 @@ def test_lookup(git_project_factory, monkeypatch):
     monkeypatch.chdir(repo.workdir)
     repofound = scm.lookup(dstdir.relative_to(repo.workdir))
     assert repofound
-    assert (str(repofound.workdir) == f"{repo.workdir}")
+    assert str(repofound.workdir) == f"{repo.workdir}"
 
 
 def test_basic_scm_operations(git_project_factory):

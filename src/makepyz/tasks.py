@@ -5,7 +5,7 @@ import os
 import inspect
 from pathlib import Path
 
-BASEDIR : Path | None = None
+BASEDIR: Path | None = None
 
 
 def task(name: str | None = None):

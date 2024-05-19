@@ -5,6 +5,7 @@ try:
 except ModuleNotFoundError:
     rich = None
 
+
 def test_indent():
     txt = """
 
@@ -63,5 +64,3 @@ def test_indent_another():
 
 def test_lstrip():
     assert text.lstrip("/a/b/c/d/e", "/a/b") == "/c/d/e"
-
-
