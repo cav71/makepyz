@@ -78,7 +78,7 @@ jobs:
       - name: Build wheel packages
         if: ${{ ! contains(matrix.os, 'windows') }}
         run: |
-          python -m makepyz beta-build -v
+          python -m makepyz build beta -v
           touch .keepme
 
 #      - name: "Publish beta package to pypi"
