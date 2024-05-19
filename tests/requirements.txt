@@ -1,4 +1,5 @@
 build
+lxml
 mypy
 pre-commit
 pytest
