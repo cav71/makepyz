@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging
+import json
+from pathlib import Path
 from typing import Any
 
 
@@ -24,3 +26,21 @@ def validate_gdata(gdata: dict[str, Any], keys: list[str] | None = None):
         log.debug("found key %s: %s", key, gdata[key])
     if missing:
         raise RuntimeError(f"missing keys: {', '.join(missing)}")
+
+
+def get_gdata(github_dump: str) -> dict[str, Any]:
+    """process the github_dump into a valid dictionary
+
+    Eg.
+        gdata = get_gdata(os.environ["GITHUB_DUMP"])
+
+    """
+    gdata = (
+        json.loads(Path(github_dump[1:]).read_text())
+        if github_dump.startswith("@")
+        else json.loads(github_dump)
+    )
+    validate_gdata(
+        gdata, ["run_number", "sha", "ref_name", "ref_type", "workflow_ref"]
+    )
+    return gdata

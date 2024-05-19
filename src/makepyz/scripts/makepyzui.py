@@ -9,10 +9,6 @@ from makepyz import fileos, tasks, cli
 log = logging.getLogger(__name__)
 
 
-def add_arguments(parser: argparse.ArgumentParser):
-    parser.add_argument("arguments", nargs="*")
-
-
 def process_args(args: argparse.Namespace):
     if not args.config.exists():
         raise cli.AbortWrongArgumentError(f"missing config file {args.config}")
@@ -24,7 +20,7 @@ def makepy():
     return fileos.loadmod(path)
 
 
-@cli.cli(add_arguments, process_args)
+@cli.cli(process_args=process_args)
 def main(args: argparse.Namespace):
     log.info("loading make.py file %s", args.config)
     mod = makepy()

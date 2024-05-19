@@ -93,7 +93,8 @@ class LuxosParser(argparse.ArgumentParser):
         raise AbortWrongArgumentError(message)
 
     def parse_args(self, args=None, namespace=None):
-        options = super().parse_args(args, namespace)
+        #options = super().parse_args(args, namespace)
+        options, arguments = super().parse_known_args(args, namespace)
 
         # setup the logging
         config = {}
@@ -103,6 +104,9 @@ class LuxosParser(argparse.ArgumentParser):
         count = (options.verbose or 0) - (options.quiet or 0)
         setup_logging(config, count)
 
+        if hasattr(options, "arguments"):
+            raise RuntimeError("options has arguments attribute")
+        options.arguments = arguments
         return options
 
     @classmethod

@@ -29,7 +29,7 @@ def get_variable_def(
     if not abort and len(found) == 0:
         return None, "", ""
     if len(found) != 1:
-        raise RuntimeError(f"found {len(found)} candidates for version in {path}")
+        raise RuntimeError(f"found {len(found)} candidates for {key} in {path}")
     return found[0]
 
 
