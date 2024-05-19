@@ -6,6 +6,7 @@ pytest
 pytest-asyncio
 pytest-cov
 pytest-html
+pytest-subtests
 ruff
 types-pyyaml
 types-tqdm
