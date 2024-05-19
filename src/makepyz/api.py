@@ -1,3 +1,4 @@
-from .tasks import task  # noqa: F401
-from .cli import AbortExitNoTimingError, AbortCliError, AbortWrongArgumentError  # noqa: F401
+# noqa: F401
+from .tasks import task
+from .cli import AbortExitNoTimingError, AbortCliError, AbortWrongArgumentError
 from . import github
