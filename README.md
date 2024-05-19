@@ -1,1 +1,2 @@
-"# makepyz" 
+# makepyz - the makefile alternative
+
