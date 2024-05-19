@@ -55,6 +55,7 @@ show_column_numbers = true
 show_error_codes = true
 warn_no_return = false
 warn_unused_ignores = true
+check_untyped_defs = true
 
 [tool.coverage.run]
 branch = true
