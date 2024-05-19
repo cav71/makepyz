@@ -14,6 +14,7 @@ env:
   GITHUB_DUMP: ${{ toJson(github) }}
   XPY: "3.12"
   XOS: "ubuntu-latest"
+  PYTHONPATH: src
 
 
 jobs:
@@ -46,15 +47,12 @@ jobs:
 
       - name: Run Python checks (ruff)
         shell: bash
-        env:
-          PYTHONPATH: src
         run: |
            ruff check src tests
 
       - name: Run Python checks (mypy)
         shell: bash
         env:
-          PYTHONPATH: src
           OUTDIR: build/qa-${{ matrix.python-version }}-${{ matrix.os}}
         run: |
           mypy src \
@@ -63,7 +61,6 @@ jobs:
       - name: Run Python checks
         shell: bash
         env:
-          PYTHONPATH: src
           OUTDIR: build/qa-${{ matrix.python-version }}-${{ matrix.os}}
         run: |
           py.test \
@@ -81,22 +78,22 @@ jobs:
       - name: Build wheel packages
         if: ${{ ! contains(matrix.os, 'windows') }}
         run: |
-          python make.pyz beta-build -v
+          python -m makepyz beta-build -v
           touch .keepme
 
-      - name: "Publish beta package to pypi"
-        uses: pypa/gh-action-pypi-publish@release/v1
-        if: ${{ (matrix.python-version == env.XPY) && (matrix.os == env.XOS) }}
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: qa-results-${{ matrix.python-version }}-${{ matrix.os }}
-          path: |
-            build/qa-${{ matrix.python-version }}-${{ matrix.os}}
-            dist
-            .keepme
-        # Use always() to always run this step to publish test results when there are test failures
-        if: always()
+#      - name: "Publish beta package to pypi"
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        if: ${{ (matrix.python-version == env.XPY) && (matrix.os == env.XOS) }}
+#        with:
+#          password: ${{ secrets.PYPI_API_TOKEN }}
+#
+#      - name: Archive artifacts
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: qa-results-${{ matrix.python-version }}-${{ matrix.os }}
+#          path: |
+#            build/qa-${{ matrix.python-version }}-${{ matrix.os}}
+#            dist
+#            .keepme
+#        # Use always() to always run this step to publish test results when there are test failures
+#        if: always()
