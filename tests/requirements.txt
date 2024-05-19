@@ -1,0 +1,10 @@
+build
+mypy
+pre-commit
+pytest
+pytest-asyncio
+pytest-cov
+pytest-html
+ruff
+types-pyyaml
+types-tqdm
