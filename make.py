@@ -114,7 +114,10 @@ def pack(arguments: list[str]):
     section = "project.scripts"
     for target in config.options(section):
         entrypoint = config.get(section, target).strip("'").strip('"')
-        targets.append((f"{target}.pyz", entrypoint))
+        if target == "makepyz":
+            targets.append((f"{target}", entrypoint))
+        else:
+            targets.append((f"{target}.pyz", entrypoint))
 
     options = parse_arguments2(arguments)
 
