@@ -38,6 +38,14 @@ dependencies = [
 Issues = "https://github.com/cav71/makepyz/issues"
 Source = "https://github.com/cav71/makepyz"
 
+[project.scripts]
+makepyz = "makepyz.scripts.makepyzui:main"
+
+
+[tool.setuptools.package-data]
+'makepyz' = ['*.json', 'py.typed']
+
+
 [tool.ruff]
 target-version = "py39"
 line-length = 88

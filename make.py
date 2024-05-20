@@ -24,9 +24,15 @@ def logme(method, message, *args, **kwargs):
 
 @api.task()
 def info(arguments: list[str]):
-    print("arguments.")
-    for argument in arguments:
-        print(f"  {argument}")
+    """this is the hello world"""
+    print(  # noqa: T201
+        f"""
+    Hi!
+    python: {sys.executable}
+    version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}
+    cwd: {Path.cwd()}
+    arguments: {arguments}
+    """)
 
 
 def parse_arguments(arguments: list[str]):
@@ -64,7 +70,7 @@ def process_init(initfile: Path, gdata: dict[str, Any], version:str, current:str
 
 @api.task()
 def build(arguments: list[str]):
-    """create beta packages for luxos (only works in github)"""
+    """create beta and release packages for makepyz (only works in github)"""
     global DRYRUN
     options = parse_arguments(arguments)
 
@@ -85,3 +91,42 @@ def build(arguments: list[str]):
 
         if not options.dryrun:
             subprocess.check_call([sys.executable, "-m", "build"])  # noqa: S603
+
+
+def parse_arguments2(arguments: list[str]):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", "--output-dir", default=Path.cwd(), type=Path)
+    return parser.parse_args(arguments)
+
+
+@api.task()
+def pack(arguments: list[str]):
+    """create a one .pyz single file package"""
+    from configparser import ConfigParser, ParsingError
+
+    workdir = Path.cwd()
+
+    config = ConfigParser(strict=False)
+    with contextlib.suppress(ParsingError):
+        config.read(workdir / "pyproject.toml")
+
+    targets = []
+    section = "project.scripts"
+    for target in config.options(section):
+        entrypoint = config.get(section, target).strip("'").strip('"')
+        targets.append((f"{target}.pyz", entrypoint))
+
+    options = parse_arguments2(arguments)
+
+    changed = False
+    for target, entrypoint in targets:
+        dst = options.output_dir / target
+        out = misc.makezapp(dst, workdir / "src", main=entrypoint, compressed=True)
+
+        relpath = dst.relative_to(Path.cwd()) if dst.is_relative_to(Path.cwd()) else dst
+        if out:
+            print(f"Written: {relpath}", file=sys.stderr)
+            changed = True
+        else:
+            print(f"Skipping generation: {relpath}", file=sys.stderr)
+    sys.exit(int(changed))
