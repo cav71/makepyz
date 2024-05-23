@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "makepyz"
-version = "0.0.0"
+version = "0.0.1"
 description = "a new kind of make tool"
 readme = "README.md"
 license = { text = "MIT" }
