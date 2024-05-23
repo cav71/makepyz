@@ -152,7 +152,7 @@ def setup(
         kwargs["parser"] = parser
 
     t0 = time.monotonic()
-    success = "completed"
+    status = "completed"
     errormsg = ""
     show_timing = True
     try:
@@ -165,7 +165,7 @@ def setup(
         yield sig.bind(**kwargs)
     except AbortCliError as exc:
         errormsg = str(exc)
-        success = "failed"
+        status = "failed"
     except AbortWrongArgumentError as exc:
         show_timing = False
         parser.print_usage(sys.stderr)
@@ -176,13 +176,16 @@ def setup(
         sys.exit(0)
     except Exception:
         log.exception("un-handled exception")
-        success = "failed"
+        status = "failed"
     finally:
         if show_timing:
             delta = round(time.monotonic() - t0, 2)
-            log.info("task %s in %.2fs", success, delta)
+            log.info("task %s in %.2fs", status, delta)
+
     if errormsg:
         parser.error(errormsg)
+    if status == "failed":
+        sys.exit(2)
 
 
 def cli(
