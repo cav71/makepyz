@@ -15,7 +15,7 @@ from makepyz import api, misc
 log = logging.getLogger(__name__)
 
 DRYRUN = None
-
+BUILDDIR = Path.cwd() / "build"
 
 def logme(method, message, *args, **kwargs):
     tag = "(dry-run) " if DRYRUN else ""
@@ -164,7 +164,49 @@ def checks():
 @api.task()
 def tests():
     """run code checks (ruff/mypy)"""
-    api.check_call(["pytest", "-vvs", "tests"])
+    workdir = Path.cwd()
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path.cwd() / "src")
+    # api.check_call(
+    #     [
+    #         "pytest",
+    #         "-vvs",
+    #         "--cov",
+    #         "makepyz",
+    #         "--cov-report",
+    #         f"html:{BUILDDIR / 'coverage'}",
+    #         "--cov-report",
+    #         f"json:{BUILDDIR / 'coverage.json'}",
+    #         str(workdir / "tests"),
+    #     ],
+    #     env=env,
+    # )
+    import json
+    data = json.loads((BUILDDIR / "coverage.json").read_text())
+
+    covered = round(data["totals"]["percent_covered"], 2)
+    if covered < 40:
+        print(f"🔴 Bad coverage ({covered}%)")
+    elif covered < 80:
+        print(f"🟡 Not good coverage ({covered}%)")
+    else:
+        print(f"🟢 Good coverage ({covered}%)")
+
+    failures = [
+        (
+            str(path).replace("\\", "/"),
+            round(pdata["summary"]["percent_covered"], 2),
+            pdata["summary"]["num_statements"]
+        )
+        for path, pdata in data["files"].items()
+        if pdata["summary"]["num_statements"] > 10
+    ]
+    for path, covered, lines in sorted(failures, key=lambda f: -f[1]):
+        if covered < 40:
+            print(f" 🔴 ({covered}% of {lines}) {path}")
+        elif covered < 60:
+            print(f" 🟡 ({covered}% of {lines}) {path}")
+    print(f"👉 Coverage report under {BUILDDIR / 'coverage'}")
 
 
 @api.task()

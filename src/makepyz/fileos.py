@@ -207,7 +207,7 @@ def check_call(*args, **kwargs):
 
     # this takes care of win/*nix fdifferences
     shell = False
-    env = os.environ.copy()
+    env = kwargs.get("env", os.environ).copy()
     if sys.platform == "win32":
         epath = os.environ.get("PATH", "").split(os.pathsep)
         exedir = Path(sys.executable).parent / "Scripts"
