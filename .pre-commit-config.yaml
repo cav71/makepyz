@@ -38,7 +38,7 @@ repos:
       - id: pack
         name: pack
         description: "Create the pyz files"
-        entry: python3 make.pyz onepack
+        entry: python makepyz onepack
         language: system
         types_or: [python, pyi]
         pass_filenames: false

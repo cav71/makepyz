@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import sys
+import json
 import subprocess
 import contextlib
 from pathlib import Path
@@ -16,6 +17,7 @@ log = logging.getLogger(__name__)
 
 DRYRUN = None
 BUILDDIR = Path.cwd() / "build"
+
 
 def logme(method, message, *args, **kwargs):
     tag = "(dry-run) " if DRYRUN else ""
@@ -167,21 +169,21 @@ def tests():
     workdir = Path.cwd()
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path.cwd() / "src")
-    # api.check_call(
-    #     [
-    #         "pytest",
-    #         "-vvs",
-    #         "--cov",
-    #         "makepyz",
-    #         "--cov-report",
-    #         f"html:{BUILDDIR / 'coverage'}",
-    #         "--cov-report",
-    #         f"json:{BUILDDIR / 'coverage.json'}",
-    #         str(workdir / "tests"),
-    #     ],
-    #     env=env,
-    # )
-    import json
+    api.check_call(
+        [
+            "pytest",
+            "-vvs",
+            "--cov",
+            "makepyz",
+            "--cov-report",
+            f"html:{BUILDDIR / 'coverage'}",
+            "--cov-report",
+            f"json:{BUILDDIR / 'coverage.json'}",
+            str(workdir / "tests"),
+        ],
+        env=env,
+    )
+
     data = json.loads((BUILDDIR / "coverage.json").read_text())
 
     covered = round(data["totals"]["percent_covered"], 2)
@@ -196,7 +198,7 @@ def tests():
         (
             str(path).replace("\\", "/"),
             round(pdata["summary"]["percent_covered"], 2),
-            pdata["summary"]["num_statements"]
+            pdata["summary"]["num_statements"],
         )
         for path, pdata in data["files"].items()
         if pdata["summary"]["num_statements"] > 10
