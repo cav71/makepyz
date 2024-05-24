@@ -68,3 +68,15 @@ def test_indent_another():
 
 def test_lstrip():
     assert text.lstrip("/a/b/c/d/e", "/a/b") == "/c/d/e"
+
+
+def test_md(resolver):
+    txt = """
+## Intro
+
+This is a test!
+> **NOTE** Wow
+"""
+
+    path = resolver.lookup("test.md.txt")
+    assert text.md(txt) == str(path.read_bytes(), encoding="utf-8")

@@ -23,6 +23,7 @@ def validate_gdata(gdata: dict[str, Any], keys: list[str] | None = None):
     for key in keys:
         if key not in gdata:
             missing.append(key)
+            continue
         log.debug("found key %s: %s", key, gdata[key])
     if missing:
         raise RuntimeError(f"missing keys: {', '.join(missing)}")
