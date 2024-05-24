@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import functools
 import re
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 import logging
@@ -67,38 +66,3 @@ def get_environment(data: dict[str, str]) -> Environment:
     }
     env.globals["ctx"] = Context(**data)
     return env
-
-
-def zdata(path: Path):
-    from makepyz.fileos import zextract
-    from hashlib import sha256
-
-    result = {}
-    for key, data in zextract(path).items():
-        result[key] = sha256(data.encode("utf-8")).hexdigest()
-    return result
-
-
-def makezapp(dst: Path, srcdir: Path, *args, **kwargs) -> Path | None:
-    from zipapp import create_archive
-
-    # cleanup cache dirs
-    for cachedir in srcdir.rglob("__pycache__"):
-        shutil.rmtree(cachedir, ignore_errors=True)
-    for cachedir in srcdir.rglob("*.egg-info"):
-        shutil.rmtree(cachedir, ignore_errors=True)
-
-    generate = True
-    if dst.exists():
-        dst1 = dst.parent / f"{dst.name}.bak"
-        create_archive(srcdir, dst1, *args, **kwargs)
-        generate = zdata(dst) != zdata(dst1)
-        dst1.unlink()
-
-    if generate:
-        # cleanup cache dirs
-        for xx in srcdir.rglob("__pycache__"):
-            shutil.rmtree(xx, ignore_errors=True)
-
-        create_archive(srcdir, dst, *args, **kwargs)
-        return dst

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import contextlib
 import os
+import subprocess
+import sys
 import shutil
 import tempfile
 import types
 from pathlib import Path
-from typing import Any, overload, Iterator
+from typing import overload, Iterator
 
 
 class FileOSError(Exception):
@@ -104,13 +106,15 @@ def loadmod(path: Path | str, suffix: str | None = "") -> types.ModuleType:
 ### FILE UTILITIES
 
 
-def zextract(path: Path | str, items: list[str] | None = None) -> dict[str, Any]:
+def zextract(
+    path: Path | str, items: list[str] | None = None, encoding: str | None = "utf-8"
+) -> dict[str, str | bytes]:
     """extracts from path (a zipfile/tarball) all data in a dictionary"""
     from tarfile import TarFile, is_tarfile
     from zipfile import ZipFile, is_zipfile
 
     path = Path(path)
-    result = {}
+    result: dict[str, str | bytes] = {}
     if is_tarfile(path):
         with TarFile.open(path) as tfp:
             for member in tfp.getmembers():
@@ -124,9 +128,15 @@ def zextract(path: Path | str, items: list[str] | None = None) -> dict[str, Any]
                 if items and zinfo.filename not in items:
                     continue
                 with tfp.open(zinfo.filename) as fp:
-                    result[zinfo.filename] = str(fp.read(), encoding="utf-8").replace(
-                        "\r", ""
-                    )
+                    data = fp.read()
+                    try:
+                        if encoding:
+                            out = str(data, encoding=encoding).replace("\r", "")
+                            result[zinfo.filename] = out
+                        else:
+                            result[zinfo.filename] = data
+                    except UnicodeDecodeError:
+                        pass
 
     return result
 
@@ -190,3 +200,27 @@ def backups():
             original = Path(backup).with_suffix("")
             original.unlink()
             shutil.move(Path(backup), original)
+
+
+def check_call(*args, **kwargs):
+    """multiplatform check_call"""
+
+    # this takes care of win/*nix fdifferences
+    shell = False
+    env = os.environ.copy()
+    if sys.platform == "win32":
+        epath = os.environ.get("PATH", "").split(os.pathsep)
+        exedir = Path(sys.executable).parent / "Scripts"
+        if str(exedir) not in epath:
+            epath.insert(0, str(exedir))
+        env["PATH"] = os.pathsep.join(str(e) for e in epath)
+
+        eext = os.environ.get("PATHEXT", "").split(os.pathsep)
+        exeext = ".EXE"
+        if exeext not in eext:
+            eext.insert(0, str(exeext))
+        env["PATHEXT"] = os.pathsep.join(str(e) for e in eext)
+        shell = True
+    kwargs["shell"] = shell
+    kwargs["env"] = env
+    return subprocess.check_call(*args, **kwargs)

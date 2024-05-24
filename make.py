@@ -32,17 +32,13 @@ def info(arguments: list[str]):
     version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}
     cwd: {Path.cwd()}
     arguments: {arguments}
-    """)
+    """
+    )
 
 
-def parse_arguments(arguments: list[str]):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["beta", "release"])
-    parser.add_argument("-n", "--dry-run", dest="dryrun", action="store_true")
-    return parser.parse_args(arguments)
-
-
-def process_pyproject(pyproject: Path, gdata: dict[str, Any], release: bool) -> tuple[Path, str, str]:
+def process_pyproject(
+    pyproject: Path, gdata: dict[str, Any], release: bool
+) -> tuple[Path, str, str]:
     lineno, current, quote = misc.get_variable_def(pyproject, "version")
     logme("debug", "found at LN:%i: version = '%s'", lineno, current)
     version = current if release else f"{current}b{gdata['run_number']}"
@@ -52,7 +48,9 @@ def process_pyproject(pyproject: Path, gdata: dict[str, Any], release: bool) -> 
     return pyproject, version, current
 
 
-def process_init(initfile: Path, gdata: dict[str, Any], version:str, current:str) -> Path:
+def process_init(
+    initfile: Path, gdata: dict[str, Any], version: str, current: str
+) -> Path:
     lineno, old, quote = misc.get_variable_def(initfile, "__version__")
     logme("debug", "found at LN:%i: __version__ = '%s'", lineno, old)
     if old != "" and old != current:
@@ -72,11 +70,18 @@ def process_init(initfile: Path, gdata: dict[str, Any], version:str, current:str
 def build(arguments: list[str]):
     """create beta and release packages for makepyz (only works in github)"""
     global DRYRUN
+
+    def parse_arguments(arguments: list[str]):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("mode", choices=["beta", "release"])
+        parser.add_argument("-n", "--dry-run", dest="dryrun", action="store_true")
+        return parser.parse_args(arguments)
+
     options = parse_arguments(arguments)
 
     DRYRUN = options.dryrun
 
-    release = (options.mode == "release")
+    release = options.mode == "release"
 
     gdata = api.github.get_gdata(os.environ["GITHUB_DUMP"])
 
@@ -93,16 +98,15 @@ def build(arguments: list[str]):
             subprocess.check_call([sys.executable, "-m", "build"])  # noqa: S603
 
 
-def parse_arguments2(arguments: list[str]):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--output-dir", default=Path.cwd(), type=Path)
-    return parser.parse_args(arguments)
-
-
 @api.task()
 def pack(arguments: list[str]):
     """create a one .pyz single file package"""
     from configparser import ConfigParser, ParsingError
+
+    def parse_arguments2(arguments: list[str]):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-o", "--output-dir", default=Path.cwd(), type=Path)
+        return parser.parse_args(arguments)
 
     workdir = Path.cwd()
 
@@ -124,7 +128,7 @@ def pack(arguments: list[str]):
     changed = False
     for target, entrypoint in targets:
         dst = options.output_dir / target
-        out = misc.makezapp(dst, workdir / "src", main=entrypoint, compressed=True)
+        out = api.makezapp(dst, workdir / "src", main=entrypoint, compressed=True)
 
         relpath = dst.relative_to(Path.cwd()) if dst.is_relative_to(Path.cwd()) else dst
         if out:
@@ -133,3 +137,37 @@ def pack(arguments: list[str]):
         else:
             print(f"Skipping generation: {relpath}", file=sys.stderr)
     sys.exit(int(changed))
+
+
+@api.task()
+def checks():
+    """run code checks (ruff/mypy)"""
+    api.check_call(
+        [
+            "pre-commit",
+            "run",
+            "-a",
+            "ruff-format",
+        ]
+    )
+    api.check_call(
+        [
+            "pre-commit",
+            "run",
+            "-a",
+            "ruff",
+        ]
+    )
+    api.check_call(["pre-commit", "run", "-a", "mypy"])
+
+
+@api.task()
+def tests():
+    """run code checks (ruff/mypy)"""
+    api.check_call(["pytest", "-vvs", "tests"])
+
+
+@api.task()
+def fmt():
+    """run code checks (ruff/mypy)"""
+    api.check_call(["ruff", "format", "src", "tests"])

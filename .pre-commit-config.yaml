@@ -1,15 +1,6 @@
 repos:
   - repo: local
     hooks:
-      - id: onepack
-        name: onepack
-        description: "Create the pyz files"
-        entry: python3 make.pyz onepack
-        language: system
-        types_or: [python, pyi]
-        pass_filenames: false
-        always_run: true
-
       - id: ruff
         name: ruff
         description: "Run 'ruff' for extremely fast Python linting"
@@ -43,3 +34,12 @@ repos:
         require_serial: true
         additional_dependencies: []
         minimum_pre_commit_version: '2.9.2'
+
+      - id: pack
+        name: pack
+        description: "Create the pyz files"
+        entry: python3 make.pyz onepack
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+        always_run: true

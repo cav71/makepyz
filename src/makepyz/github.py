@@ -40,7 +40,5 @@ def get_gdata(github_dump: str) -> dict[str, Any]:
         if github_dump.startswith("@")
         else json.loads(github_dump)
     )
-    validate_gdata(
-        gdata, ["run_number", "sha", "ref_name", "ref_type", "workflow_ref"]
-    )
+    validate_gdata(gdata, ["run_number", "sha", "ref_name", "ref_type", "workflow_ref"])
     return gdata

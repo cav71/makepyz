@@ -1,9 +1,12 @@
+import types
+
 from makepyz import text
 
-try:
-    import rich
-except ModuleNotFoundError:
-    rich = None
+import importlib.util
+
+rich: types.ModuleType | None = None
+if _spec := importlib.util.find_spec("rich"):
+    rich = importlib.util.module_from_spec(_spec)
 
 
 def test_indent():
