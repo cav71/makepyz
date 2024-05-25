@@ -80,8 +80,8 @@ def build(arguments: list[str]):
 
     options = parse_arguments(arguments)
 
-    if not os.getenv("GITHUB_DUM"):
-        raise api.AbortWrongArgumentError("no GITHUB_DUM env defined")
+    if not os.getenv("GITHUB_DUMP"):
+        raise api.AbortWrongArgumentError("no GITHUB_DUMP env defined")
 
     DRYRUN = options.dryrun
     release = options.mode == "release"
