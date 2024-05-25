@@ -13,13 +13,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Eg.
 #     resolver.lookup("foobar") ->
 #       looks un under data/foobar or data/test_name/foobar
-from support.resolver import datadir, resolver, mktree  # noqa: F401
-
-
 # this ficture generate a new brand python/git project
 # Eg.
 #     repo = git_project_factory().create()
 from support.projects import git_project_factory  # noqa: F401
+from support.resolver import datadir, mktree, resolver  # noqa: F401
 
 
 def loadmod(path: Path) -> types.ModuleType:

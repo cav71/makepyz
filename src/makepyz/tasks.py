@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import functools
-import os
 import inspect
+import os
 from pathlib import Path
 
 BASEDIR: Path | None = None

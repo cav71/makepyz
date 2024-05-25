@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import argparse
-import sys
-import io
 import collections
 import dataclasses as dc
 import enum
+import io
+import sys
 from pathlib import Path
 from typing import TextIO
 
@@ -262,10 +262,10 @@ def plot(root: Node, buffer: TextIO = sys.stdout) -> TextIO:
 
 
 def showtree(root: Node) -> None:  # pragma: no cover
-    from time import sleep
     from contextlib import ExitStack
+    from subprocess import call, check_call
     from tempfile import NamedTemporaryFile
-    from subprocess import check_call, call
+    from time import sleep
 
     if sys.platform != "darwin":
         raise NotImplementedError(f"cannot use this on {sys.platform}")

@@ -72,7 +72,9 @@ class GitRepoHead:
 
 
 class GitRepoBase:
-    def __init__(self, workdir: Path | str, exe: str = "git", gitdir: Path | str = ""):
+    def __init__(
+        self, workdir: Path | str, exe: str | Path = "git", gitdir: Path | str = ""
+    ):
         self.workdir = Path(workdir).absolute()
         self.exe = exe
         self.gitdir = Path(gitdir or (self.workdir / ".git")).absolute()
@@ -284,3 +286,21 @@ def lookup(path: Path | str) -> GitRepo | None:
         cur = cur.parent
 
     return None
+
+
+def clone(
+    url: str, dest: Path, branch: str | None = None, exe: str | Path = "git"
+) -> GitRepo:
+    subprocess.check_call(
+        [
+            str(c)
+            for c in [
+                exe,
+                "clone",
+                *(["-b", branch] if branch else []),
+                url,
+                dest,
+            ]
+        ]
+    )
+    return GitRepo(dest, exe)

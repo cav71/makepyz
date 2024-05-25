@@ -1,8 +1,23 @@
+import contextlib
 import subprocess
 
 import pytest
 
 from makepyz import scm
+
+
+def test_clone(tmp_path):
+    from configparser import ConfigParser, ParsingError
+
+    repo = scm.clone("https://github.com/cav71/makepyz.git", tmp_path / "master")
+    assert repo.branch() == "master"
+    assert (repo.workdir / "pyproject.toml").exists()
+    config = ConfigParser(strict=False)
+    with contextlib.suppress(ParsingError):
+        config.read(repo.workdir / "pyproject.toml")
+    assert "build-system" in config.sections()
+    assert config.options("project")
+    assert config.get("project", "name").strip('"') == "makepyz"
 
 
 def test_lookup(git_project_factory, monkeypatch):

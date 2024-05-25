@@ -1,11 +1,11 @@
 from __future__ import annotations
-import os
+
 import collections
+import os
 
 import pytest
 
 from makepyz import tree as ptree
-
 
 TREE = """
 package2/modF.py

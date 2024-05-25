@@ -54,6 +54,14 @@ line-length = 88
 [tool.ruff.format]
 quote-style = "double"
 
+[tool.ruff.lint]
+ignore = []
+select = ["F", "E", "W", "Q", "I001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["makepyz"]
+
+
 [tool.mypy]
 disallow_untyped_defs = false
 follow_imports = "normal"

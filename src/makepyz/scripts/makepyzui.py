@@ -1,10 +1,10 @@
 import argparse
 import inspect
+import logging
 import sys
 from pathlib import Path
-import logging
 
-from makepyz import fileos, tasks, cli
+from makepyz import cli, fileops, tasks
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ def process_args(args: argparse.Namespace):
 def makepy():
     path = (Path.cwd() / "make.py").absolute()
     tasks.BASEDIR = path.parent
-    return fileos.loadmod(path)
+    return fileops.loadmod(path)
 
 
 @cli.cli(process_args=process_args)

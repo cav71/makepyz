@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import argparse
 import functools
+import logging
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
-import logging
 
 if TYPE_CHECKING:
     from jinja2 import Environment
@@ -46,8 +46,9 @@ def set_variable_def(
 
 def get_environment(data: dict[str, str]) -> Environment:
     """returns a context object"""
-    from jinja2 import Environment
     from urllib.parse import quote
+
+    from jinja2 import Environment
 
     class Context(argparse.Namespace):
         def items(self):

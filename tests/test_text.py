@@ -1,9 +1,9 @@
 from __future__ import annotations
+
+import importlib.util
 import types
 
 from makepyz import text
-
-import importlib.util
 
 rich: types.ModuleType | None = None
 if _spec := importlib.util.find_spec("rich"):
@@ -79,4 +79,4 @@ This is a test!
 """
 
     path = resolver.lookup("test.md.txt")
-    assert text.md(txt) == str(path.read_bytes(), encoding="utf-8")
+    assert text.md(txt, width=80) == str(path.read_bytes(), encoding="utf-8")

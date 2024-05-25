@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import contextlib
 import os
+import shutil
 import subprocess
 import sys
-import shutil
 import tempfile
 import types
 from pathlib import Path
-from typing import overload, Iterator
+from typing import Iterator, overload
 
 
 class FileOSError(Exception):

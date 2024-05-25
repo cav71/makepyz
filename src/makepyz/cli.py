@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import sys
+import argparse
 import contextlib
+import functools
 import inspect
 import logging
+import sys
 import time
 import types
 from pathlib import Path
-import functools
-import argparse
-from typing import Callable, Any
-
+from typing import Any, Callable
 
 # SPECIAL MODULE LEVEL VARIABLES
 MODULE_VARIABLES: dict[str, Any] = {

@@ -1,16 +1,17 @@
 # All related to packaging
 from __future__ import annotations
-from pathlib import Path
+
 import hashlib
 import zipapp
+from pathlib import Path
 
-from . import fileos
+from . import fileops
 
 
 def zhash(path: Path, encoding: str | None = "utf-8") -> dict[str, str]:
     """extract a zip file in path"""
     result = {}
-    for key, data in fileos.zextract(path, encoding=encoding).items():
+    for key, data in fileops.zextract(path, encoding=encoding).items():
         if isinstance(data, str):
             binary = data.encode(encoding or "utf-8")
         else:

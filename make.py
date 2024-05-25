@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import json
 import logging
 import os
-import sys
-import json
 import subprocess
-import contextlib
+import sys
 from pathlib import Path
 from typing import Any
 
 from makepyz import api, misc
-
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ def process_init(
 
 @api.task()
 def build(arguments: list[str]):
-    """create beta and release packages for makepyz (only works in github)"""
+    """create beta and release packages for makepyz (only in github)"""
     global DRYRUN
 
     def parse_arguments(arguments: list[str]):
@@ -81,14 +80,15 @@ def build(arguments: list[str]):
 
     options = parse_arguments(arguments)
 
+    if not os.getenv("GITHUB_DUM"):
+        raise api.AbortWrongArgumentError("no GITHUB_DUM env defined")
+
     DRYRUN = options.dryrun
-
     release = options.mode == "release"
-
     gdata = api.github.get_gdata(os.environ["GITHUB_DUMP"])
 
     with contextlib.ExitStack() as stack:
-        save = stack.enter_context(api.backups())
+        save = stack.enter_context(api.fileops.backups())
 
         # pyproject.toml
         _, version, current = process_pyproject(save("pyproject.toml"), gdata, release)
@@ -105,10 +105,12 @@ def pack(arguments: list[str]):
     """create a one .pyz single file package"""
     from configparser import ConfigParser, ParsingError
 
-    def parse_arguments2(arguments: list[str]):
+    def parse_arguments(arguments: list[str]):
         parser = argparse.ArgumentParser()
         parser.add_argument("-o", "--output-dir", default=Path.cwd(), type=Path)
         return parser.parse_args(arguments)
+
+    options = parse_arguments(arguments)
 
     workdir = Path.cwd()
 
@@ -124,8 +126,6 @@ def pack(arguments: list[str]):
             targets.append((f"{target}", entrypoint))
         else:
             targets.append((f"{target}.pyz", entrypoint))
-
-    options = parse_arguments2(arguments)
 
     changed = False
     for target, entrypoint in targets:
@@ -144,7 +144,7 @@ def pack(arguments: list[str]):
 @api.task()
 def checks():
     """run code checks (ruff/mypy)"""
-    api.check_call(
+    api.fileops.check_call(
         [
             "pre-commit",
             "run",
@@ -152,7 +152,7 @@ def checks():
             "ruff-format",
         ]
     )
-    api.check_call(
+    api.fileops.check_call(
         [
             "pre-commit",
             "run",
@@ -160,7 +160,7 @@ def checks():
             "ruff",
         ]
     )
-    api.check_call(["pre-commit", "run", "-a", "mypy"])
+    api.fileops.check_call(["pre-commit", "run", "-a", "mypy"])
 
 
 @api.task()
@@ -169,7 +169,7 @@ def tests():
     workdir = Path.cwd()
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path.cwd() / "src")
-    api.check_call(
+    api.fileops.check_call(
         [
             "pytest",
             "-vvs",
@@ -213,5 +213,5 @@ def tests():
 
 @api.task()
 def fmt():
-    """run code checks (ruff/mypy)"""
-    api.check_call(["ruff", "format", "src", "tests"])
+    """apply 'ruff check --fix'"""
+    api.fileops.check_call(["ruff", "check", "--fix", "src", "tests"])

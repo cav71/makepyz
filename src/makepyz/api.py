@@ -1,6 +1,5 @@
 # ruff: noqa: F401
-from .tasks import task
-from .fileos import backups, which, check_call
-from .cli import AbortExitNoTimingError, AbortCliError, AbortWrongArgumentError
-from . import github
+from . import fileops, github, scm
+from .cli import AbortCliError, AbortExitNoTimingError, AbortWrongArgumentError
 from .packaging import makezapp
+from .tasks import task
