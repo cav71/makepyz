@@ -79,4 +79,6 @@ This is a test!
 """
 
     path = resolver.lookup("test.md.txt")
-    assert text.md(txt, width=80) == str(path.read_bytes(), encoding="utf-8")
+    assert text.md(txt, width=80).replace("\r", "") == str(
+        path.read_bytes(), encoding="utf-8"
+    ).replace("\r", "")
