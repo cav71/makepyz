@@ -1,0 +1,7 @@
+{
+  "run_number": "1",
+  "sha": "f47ab9231465a4e612d46ac3aa8c60a75594deb3",
+  "ref_name": "v0.0.1",
+  "ref_type": "tag",
+  "workflow_ref": "cav71/makepyz/.github/workflows/tag.yml@refs/tags/v0.0.1"
+}

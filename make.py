@@ -42,7 +42,7 @@ def pack(arguments: list[str]):
     for target in config.options(section):
         entrypoint = config.get(section, target).strip("'").strip('"')
         if target == "makepyz":
-            targets.append((f"{target}", entrypoint))
+            targets.append(("make.pyz", entrypoint))
         else:
             targets.append((f"{target}.pyz", entrypoint))
 
