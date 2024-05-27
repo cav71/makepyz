@@ -29,10 +29,16 @@ def task(name: str | None = None):
             finally:
                 os.chdir(oldcd)
 
-        _fn1.task = name or function.__name__  # type: ignore
+        _fn1.task = (
+            name or (function.func if hasattr(function, "func") else function).__name__
+        )  # type: ignore
         return _fn1
 
     return _fn
+
+
+def add_task(function, **kwargs):
+    return task()(functools.partial(function, **kwargs))
 
 
 def info(arguments: list[str], mod: types.ModuleType | None = None):
