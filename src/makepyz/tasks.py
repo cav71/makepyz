@@ -52,7 +52,7 @@ Hi!
     print("** SPECIAL MODULE LEVEL VARIABLE **")
     for name, value in sorted(api.MODULE_VARIABLES.items(), key=lambda x: x[0].upper()):
         print(f"{name}")
-        print(f"  actual: {getattr(mod, name, "N/A")}")
+        print(f"  actual: {getattr(mod, name, 'N/A')}")
         print(f"  api:    {value}")
     print()
     print("** ARGUMENTS **")
