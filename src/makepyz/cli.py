@@ -17,10 +17,14 @@ from typing import Any, Callable
 MODULE_VARIABLES: dict[str, Any] = {
     "LOGGING_CONFIG": None,
     "CONFIGPATH": Path("make.py"),
+    "BUILDDIR": Path("build"),
 }
 
 
 log = logging.getLogger(__name__)
+
+
+Callback = Callable[[argparse.Namespace, list[str]], None]
 
 
 class CliBaseError(Exception):
@@ -37,6 +41,30 @@ class AbortWrongArgumentError(CliBaseError):
 
 class AbortExitNoTimingError(CliBaseError):
     pass
+
+
+class Optional:
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+
+def resolve(mod: types.ModuleType, var: str, options: argparse.Namespace) -> Any:
+    # sources:
+    # 1. cli
+    if not isinstance(getattr(options, var), Optional):
+        value = getattr(options, var)
+    # 2. mod
+    elif hasattr(mod, var):
+        value = getattr(mod, var)
+    # 3. fallback
+    elif var in MODULE_VARIABLES:
+        value = MODULE_VARIABLES[var]
+    else:
+        raise RuntimeError(f"cannot resolve {var}")
+    return value
 
 
 def setup_logging(config: dict[str, Any], count: int) -> None:
@@ -60,48 +88,129 @@ def setup_logging(config: dict[str, Any], count: int) -> None:
     logging.basicConfig(**config)
 
 
-class LuxosParser(argparse.ArgumentParser):
-    def __init__(self, module_variables, *args, **kwargs):
+def add_config(parser: MakepyzParser, var: str = "CONFIGPATH") -> Callback:
+    # we add the -c|--config flag to point to a config file
+    parser.add_argument(
+        "-c",
+        "--config",
+        dest="config",
+        default=MODULE_VARIABLES[var],
+        help="path to a config file",
+    )
+
+    def callback(
+        options: argparse.Namespace,
+        _: list[str],
+    ):
+        from makepyz.fileops import loadmod
+
+        options.config = Path(options.config).expanduser().absolute()
+        is_a_module = parser.parser_variables.get("add_config", {}).get(
+            "is-a-module", False
+        )
+
+        if hasattr(options, "mod"):
+            raise RuntimeError("mod is a reserved dest for options")
+        options.mod = None
+        if is_a_module:
+            if not options.config.exists():
+                raise AbortWrongArgumentError(f"missing config file {options.config}")
+            options.mod = loadmod(options.config)
+            if hasattr(options.mod, var):
+                raise RuntimeError(f"cannot define {var} in {options.config}")
+
+    return callback
+
+
+def add_builddir(parser: MakepyzParser, var: str = "BUILDDIR") -> Callback:
+    # we source the default:
+    #  1. from module
+    #  2. from this file in MODULE_VARIABLES
+    # we evaluate the arguments on the cli and we set the module.BUILDDIR
+    path = Path(MODULE_VARIABLES[var]).expanduser().absolute()
+
+    parser.add_argument(
+        "--build-dir",
+        dest=var,
+        default=Optional(path),
+        type=Path,
+        help="path to the output builddir",
+    )
+
+    def callback(
+        options: argparse.Namespace,
+        _: list[str],
+    ):
+        if options.mod:
+            value = Path(resolve(options.mod, var, options)).expanduser().absolute()
+            setattr(options.mod, var, value)
+        delattr(options, var)
+
+    return callback
+
+
+def add_logging(parser: MakepyzParser, var: str = "LOGGING_CONFIG") -> Callback:
+    # we're adding the -v|-q flags, to control the logging level
+    parser.add_argument(
+        "-v", "--verbose", action="count", help="report verbose logging"
+    )
+    parser.add_argument("-q", "--quiet", action="count", help="report quiet logging")
+
+    def callback(
+        options: argparse.Namespace,
+        _: list[str],
+    ):
+        # setup the logging
+        config = (MODULE_VARIABLES[var] or {}).copy()
+
+        # updating with vars from the module
+        if options.mod:
+            config.update(getattr(options.mod, var, {}))
+
+        count = (options.verbose or 0) - (options.quiet or 0)
+        setup_logging(config, count)
+        delattr(options, "verbose")
+        delattr(options, "quiet")
+
+    return callback
+
+
+class MakepyzParser(argparse.ArgumentParser):
+    def __init__(self, parser_variables: dict[str, Any] | None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.module_variables = module_variables or {}
+        self.parser_variables = parser_variables or {}
 
-        # we're adding the -v|-q flags, to control the logging level
-        self.add_argument(
-            "-v", "--verbose", action="count", help="report verbose logging"
-        )
-        self.add_argument("-q", "--quiet", action="count", help="report quiet logging")
+        self.callbacks: list[Callback | None] = []
 
-        # we add the -c|--config flag to point to a config file
-        configpath = Path(
-            self.module_variables.get("CONFIGPATH") or MODULE_VARIABLES["CONFIGPATH"]
-        )
-        configpath = Path(configpath).expanduser().absolute()
-        if configpath.is_relative_to(Path.cwd()):
-            configpath = configpath.relative_to(Path.cwd())
+        # add the -c|--config flag
+        self.callbacks.append(add_config(self))
 
-        self.add_argument(
-            "-c",
-            "--config",
-            default=configpath,
-            type=Path,
-            help="path to a config file",
-        )
+        # adds the --verbose|--quiet flags
+        self.callbacks.append(add_logging(self))
+
+        # we add the "--build-dir" flag to point to a config file
+        self.callbacks.append(add_builddir(self))
 
     def error(self, message):
         raise AbortWrongArgumentError(message)
 
-    def parse_args(self, args=None, namespace=None):
+    def parse_args(  # type: ignore
+        self,
+        args: list[str] | None = None,
+        namespace: argparse.Namespace | None = None,
+        module: types.ModuleType | None = None,
+    ):
         # options = super().parse_args(args, namespace)
         options, arguments = super().parse_known_args(args, namespace)
 
-        # setup the logging
-        config = {}
-        if value := self.module_variables.get("LOGGING_CONFIG"):
-            config = value.copy()
+        if hasattr(options, "mod"):
+            raise RuntimeError("options has a .mod attribute (it's internal)")
 
-        count = (options.verbose or 0) - (options.quiet or 0)
-        setup_logging(config, count)
+        for callback in self.callbacks:
+            if not callback:
+                continue
+            callback(options, arguments)
 
         if hasattr(options, "arguments"):
             raise RuntimeError("options has arguments attribute")
@@ -109,14 +218,14 @@ class LuxosParser(argparse.ArgumentParser):
         return options
 
     @classmethod
-    def get_parser(cls, module_variables, **kwargs):
+    def get_parser(cls, parser_variables: dict[str, Any] | None = None, **kwargs):
         class Formatter(
             argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter
         ):
             pass
 
         return cls(
-            module_variables=module_variables, formatter_class=Formatter, **kwargs
+            parser_variables=parser_variables, formatter_class=Formatter, **kwargs
         )
 
 
@@ -125,14 +234,12 @@ def setup(
     module: types.ModuleType | None,
     function: Callable,
     add_arguments: Callable[[argparse.ArgumentParser], None] | None = None,
-    process_args: Callable[[argparse.Namespace], argparse.Namespace | None]
-    | None = None,
+    process_args: (
+        Callable[[argparse.Namespace], argparse.Namespace | None] | None
+    ) = None,
+    parser_variables: dict[str, Any] | None = None,
 ):
     sig = inspect.signature(function)
-
-    module_variables = MODULE_VARIABLES.copy()
-    for name in list(module_variables):
-        module_variables[name] = getattr(module, name, None)
 
     if "args" in sig.parameters and "parser" in sig.parameters:
         raise RuntimeError("cannot use args and parser at the same time")
@@ -141,8 +248,8 @@ def setup(
         (function.__doc__ or module.__doc__ or "").strip().partition("\n")
     )
     kwargs = {}
-    parser = LuxosParser.get_parser(
-        module_variables, description=description, epilog=epilog
+    parser = MakepyzParser.get_parser(
+        parser_variables, description=description, epilog=epilog
     )
     if add_arguments:
         add_arguments(parser)
@@ -150,17 +257,22 @@ def setup(
     if "parser" in sig.parameters:
         kwargs["parser"] = parser
 
+    if "callbacks" in sig.parameters:
+        kwargs["callbacks"] = parser.callbacks
+
     t0 = time.monotonic()
     status = "completed"
     errormsg = ""
     show_timing = True
     try:
         if "parser" not in sig.parameters:
-            args = parser.parse_args()
+            args = parser.parse_args(module=module)
             if process_args:
                 args = process_args(args) or args
             if "args" in sig.parameters:
                 kwargs["args"] = args
+            if "mod" in sig.parameters:
+                kwargs["mod"] = args.mod
         yield sig.bind(**kwargs)
     except AbortCliError as exc:
         errormsg = str(exc)
@@ -192,27 +304,39 @@ def cli(
     process_args: (
         Callable[[argparse.Namespace], argparse.Namespace | None] | None
     ) = None,
+    parser_variables: dict[str, Any] | None = None,
 ):
     def _cli1(function):
         module = inspect.getmodule(function)
 
-        def log_sys_info():
-            log.info("system: %s, %s", sys.executable, sys.version)
+        def log_sys_info(ba):
+            path = getattr(
+                getattr(
+                    (ba.args or [argparse.Namespace()])[0], "mod", argparse.Namespace()
+                ),
+                "__file__",
+                "N/A",
+            )
+            log.info("system: %s, %s, %s", sys.executable, sys.version, path)
 
         if inspect.iscoroutinefunction(function):
 
             @functools.wraps(function)
             async def _cli2(*args, **kwargs):
-                with setup(module, function, add_arguments, process_args) as ba:
-                    log_sys_info()
+                with setup(
+                    module, function, add_arguments, process_args, parser_variables
+                ) as ba:
+                    log_sys_info(ba)
                     return await function(*ba.args, **ba.kwargs)
 
         else:
 
             @functools.wraps(function)
             def _cli2(*args, **kwargs):
-                with setup(module, function, add_arguments, process_args) as ba:
-                    log_sys_info()
+                with setup(
+                    module, function, add_arguments, process_args, parser_variables
+                ) as ba:
+                    log_sys_info(ba)
                     return function(*ba.args, **ba.kwargs)
 
         _cli2.attributes = {  # type: ignore

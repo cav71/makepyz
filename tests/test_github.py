@@ -23,7 +23,7 @@ def test_get_gdata(resolver):
         "ref_type": "branch",
         "run_number": "5",
         "sha": "18cc30248e1023c50f26b0d5c38c11e71e5af99a",
-        "workflow_ref": "LuxorLabs/luxos-tooling/.github/workflows/"
+        "workflow_ref": "cav71/makepyz/.github/workflows/"
         "push-main.yml@refs/heads/main",
     }
 
@@ -32,6 +32,6 @@ def test_get_gdata(resolver):
         "ref_type": "branch",
         "run_number": "5",
         "sha": "18cc30248e1023c50f26b0d5c38c11e71e5af99a",
-        "workflow_ref": "LuxorLabs/luxos-tooling/.github/workflows/"
+        "workflow_ref": "cav71/makepyz/.github/workflows/"
         "push-main.yml@refs/heads/main",
     }

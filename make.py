@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import json
 import logging
 import os
 import subprocess
@@ -15,26 +14,12 @@ from makepyz import api, misc
 log = logging.getLogger(__name__)
 
 DRYRUN = None
-BUILDDIR = Path.cwd() / "build"
+BUILDDIR = Path("build")
 
 
 def logme(method, message, *args, **kwargs):
     tag = "(dry-run) " if DRYRUN else ""
     getattr(log, method)(tag + message, *args, **kwargs)
-
-
-@api.task()
-def info(arguments: list[str]):
-    """this is the hello world"""
-    print(  # noqa: T201
-        f"""
-    Hi!
-    python: {sys.executable}
-    version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}
-    cwd: {Path.cwd()}
-    arguments: {arguments}
-    """
-    )
 
 
 def process_pyproject(
@@ -65,6 +50,11 @@ def process_init(
     misc.set_variable_def(initfile, "__hash__", lineno, gdata["sha"], quote)
 
     return initfile
+
+
+tests = api.task()(api.tasks.tests)
+checks = api.task()(api.tasks.checks)
+fmt = api.task()(api.tasks.fmt)
 
 
 @api.task()
@@ -139,79 +129,3 @@ def pack(arguments: list[str]):
         else:
             print(f"Skipping generation: {relpath}", file=sys.stderr)
     sys.exit(int(changed))
-
-
-@api.task()
-def checks():
-    """run code checks (ruff/mypy)"""
-    api.fileops.check_call(
-        [
-            "pre-commit",
-            "run",
-            "-a",
-            "ruff-format",
-        ]
-    )
-    api.fileops.check_call(
-        [
-            "pre-commit",
-            "run",
-            "-a",
-            "ruff",
-        ]
-    )
-    api.fileops.check_call(["pre-commit", "run", "-a", "mypy"])
-
-
-@api.task()
-def tests():
-    """run code checks (ruff/mypy)"""
-    workdir = Path.cwd()
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(Path.cwd() / "src")
-    api.fileops.check_call(
-        [
-            "pytest",
-            "-vvs",
-            "--cov",
-            "makepyz",
-            "--cov-report",
-            f"html:{BUILDDIR / 'coverage'}",
-            "--cov-report",
-            f"json:{BUILDDIR / 'coverage.json'}",
-            str(workdir / "tests"),
-        ],
-        env=env,
-    )
-
-    data = json.loads((BUILDDIR / "coverage.json").read_text())
-
-    covered = round(data["totals"]["percent_covered"], 2)
-    if covered < 40:
-        print(f"🔴 Bad coverage ({covered}%)")
-    elif covered < 80:
-        print(f"🟡 Not good coverage ({covered}%)")
-    else:
-        print(f"🟢 Good coverage ({covered}%)")
-
-    failures = [
-        (
-            str(path).replace("\\", "/"),
-            round(pdata["summary"]["percent_covered"], 2),
-            pdata["summary"]["num_statements"],
-        )
-        for path, pdata in data["files"].items()
-        if pdata["summary"]["num_statements"] > 10
-    ]
-    for path, covered, lines in sorted(failures, key=lambda f: -f[1]):
-        if covered < 40:
-            print(f" 🔴 ({covered}% of {lines}) {path}")
-        elif covered < 60:
-            print(f" 🟡 ({covered}% of {lines}) {path}")
-    print(f"👉 Coverage report under {BUILDDIR / 'coverage'}")
-
-
-@api.task()
-def fmt():
-    """apply 'ruff check --fix'"""
-    api.fileops.check_call(["ruff", "check", "--fix", "src", "tests"])

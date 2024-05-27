@@ -1,17 +1,15 @@
 import argparse
+import contextlib
+import functools
 import inspect
 import logging
 import sys
+import types
 from pathlib import Path
 
 from makepyz import cli, fileops, tasks
 
 log = logging.getLogger(__name__)
-
-
-def process_args(args: argparse.Namespace):
-    if not args.config.exists():
-        raise cli.AbortWrongArgumentError(f"missing config file {args.config}")
 
 
 def makepy():
@@ -20,23 +18,34 @@ def makepy():
     return fileops.loadmod(path)
 
 
-@cli.cli(process_args=process_args)
-def main(args: argparse.Namespace):
-    log.info("loading make.py file %s", args.config)
-    mod = makepy()
+@cli.cli(parser_variables={"add_config": {"is-a-module": True}})
+def main(args: argparse.Namespace, mod: types.ModuleType):
+    if not mod.__file__:
+        raise RuntimeError(f"mo module path for {mod}")
+    tasks.BASEDIR = Path(mod.__file__).parent
 
-    def getdoc(fn):
-        return (
-            fn.__doc__.strip().partition("\n")[0] if fn.__doc__ else "no help available"
-        )
+    names = [
+        k for k in dir(mod) if isinstance(getattr(getattr(mod, k), "task", None), str)
+    ]
+    commands = {}
+    if "info" not in names:
+        commands["info"] = tasks.info
 
-    commands = {
-        getattr(mod, k).task: getattr(mod, k)
-        for k in dir(mod)
-        if isinstance(getattr(getattr(mod, k), "task", None), str)
-    }
+    for name in names:
+        function = getattr(mod, name)
+        if "mod" in inspect.signature(function).parameters:
+            function = functools.partial(function, mod=mod)
+        commands[getattr(mod, name).task] = function
 
     if not args.arguments or args.arguments[0] not in commands:
+
+        def getdoc(fn):
+            return (
+                fn.__doc__.strip().partition("\n")[0]
+                if fn.__doc__
+                else "no help available"
+            )
+
         txt = "\n".join(f"  {cmd} - {getdoc(fn)}" for cmd, fn in commands.items())
         print(  # noqa: T201
             f"""\
@@ -49,7 +58,12 @@ Commands:
         )
         raise cli.AbortExitNoTimingError()
 
-    # try:
+    # you can pass arguments to a command
+    # passing a `--` to avoid the main parser
+    # to catch them.
+    with contextlib.suppress(ValueError):
+        del args.arguments[args.arguments.index("--")]
+
     command = commands[args.arguments[0]]
     sig = inspect.signature(command)
     kwargs = {}
@@ -57,20 +71,6 @@ Commands:
         kwargs["arguments"] = args.arguments[1:]
     ba = sig.bind(**kwargs)
     command(*ba.args, **ba.kwargs)
-    # except cli.AbortCliError:
-    #     raise
-    # except exceptions.AbortExecutionError as e:
-    #     print(f"error: {e}", file=sys.stderr)  # noqa: T201
-    # except Exception as e:
-    #     message, _, explain = str(e).strip().partition("\n")
-    #     message = message.strip()
-    #     explain = text.indent(explain, "  ")
-    #     tbtext = text.indent(traceback.format_exc(), "| ")
-    #
-    #     print(tbtext, file=sys.stderr)
-    #     print(message, file=sys.stderr)
-    #     if explain:
-    #         print(explain, file=sys.stderr)
 
 
 if __name__ == "__main__":
