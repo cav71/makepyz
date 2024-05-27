@@ -29,9 +29,9 @@ def task(name: str | None = None):
             finally:
                 os.chdir(oldcd)
 
-        _fn1.task = (
+        _fn1.task = (  # type: ignore
             name or (function.func if hasattr(function, "func") else function).__name__
-        )  # type: ignore
+        )
         return _fn1
 
     return _fn
