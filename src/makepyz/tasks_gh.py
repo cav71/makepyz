@@ -51,7 +51,7 @@ def process_init(
     return initfile
 
 
-def build(arguments: list[str]):
+def build(arguments: list[str], package: str = "makepyz"):
     """create beta and release packages for makepyz (only in github)"""
     from . import cli, fileops, github
 
@@ -79,7 +79,7 @@ def build(arguments: list[str]):
         _, version, current = process_pyproject(save("pyproject.toml"), gdata, release)
 
         # __init__.py
-        _ = process_init(save("src/makepyz/__init__.py"), gdata, version, current)
+        _ = process_init(save(f"src/{package}/__init__.py"), gdata, version, current)
 
         if not options.dryrun:
             subprocess.check_call([sys.executable, "-m", "build"])  # noqa: S603

@@ -63,7 +63,7 @@ Hi!
         print(head.format(name=name, value=argument, sep=":"))
 
 
-def tests(arguments: list[str], mod: types.ModuleType):
+def tests(arguments: list[str], mod: types.ModuleType, package: str = "makepyz"):
     """run all tests"""
 
     # def parse_arguments(arguments: list[str]):
@@ -83,7 +83,7 @@ def tests(arguments: list[str], mod: types.ModuleType):
             "pytest",
             "-vvs",
             "--cov",
-            "makepyz",
+            package,
             "--cov-report",
             f"html:{builddir / 'coverage'}",
             "--cov-report",

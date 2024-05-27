@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import functools
 import logging
 import sys
 from pathlib import Path
@@ -10,14 +11,13 @@ from makepyz import api, tasks_gh
 
 log = logging.getLogger(__name__)
 
-DRYRUN = None
 BUILDDIR = Path("build")
 
 
-tests = api.task()(api.tasks.tests)
+tests = functools.partial(api.task()(api.tasks.tests), package="makepyz")
 checks = api.task()(api.tasks.checks)
 fmt = api.task()(api.tasks.fmt)
-build = api.task()(tasks_gh.build)
+build = functools.partial(api.task()(tasks_gh.build), package="makepyz")
 
 
 @api.task()
